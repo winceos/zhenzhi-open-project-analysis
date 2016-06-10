@@ -1,8 +1,10 @@
-# zhenzhi-open-project-analysis
-个人的开源代码原理阅读、解析笔记，以Android、node.js项目为主。
+countly-sdk-android Demo
+====================
+###1. Demo Download
+[本地下载](apk/cuntly-sdk-android-demo.apk?raw=true "点击下载到本地")  
 
------------
-解析计划：
+###2. Screenshot
+![Screenshot](apk/event-bus-demo.gif)  
 
-1. Countly Mobile Analytics - Android SDK (进行中...2%)
-2. countly-server(约10月)
+###3. Document
+[How to Use EventBus](https://github.com/greenrobot/EventBus/blob/master/HOWTO.md)  
