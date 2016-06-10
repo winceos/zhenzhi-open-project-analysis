@@ -1,7 +1,7 @@
 countly-sdk-android Demo
 ====================
 ###1. Demo Download
-[本地下载](apk/cuntly-sdk-android-demo.apk?raw=true "点击下载到本地")  
+[本地下载](apk/countly-sdk-android-demo.apk?raw=true "点击下载到本地")  
 
 ###2. Screenshot
 ![Screenshot](apk/event-bus-demo.gif)  
