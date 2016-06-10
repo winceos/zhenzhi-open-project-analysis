@@ -4,7 +4,8 @@ countly-sdk-android Demo
 [本地下载](apk/countly-sdk-android-demo.apk?raw=true "点击下载到本地")  
 
 ###2. Screenshot
-![Screenshot](apk/event-bus-demo.gif)  
+![Screenshot](apk/demo.png)  
 
 ###3. Document
-[How to Use EventBus](https://github.com/greenrobot/EventBus/blob/master/HOWTO.md)  
+[countly-sdk-android使用指南](http://resources.count.ly/v2.0/docs/countly-sdk-for-android) 
+[countly－server试用](http://cloud.count.ly)
