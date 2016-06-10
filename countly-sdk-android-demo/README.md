@@ -1,8 +1,11 @@
-# zhenzhi-open-project-analysis
-个人的开源代码原理阅读、解析笔记，以Android、node.js项目为主。
+countly-sdk-android Demo
+====================
+###1. Demo Download
+[本地下载](apk/countly-sdk-android-demo.apk?raw=true "点击下载到本地")  
 
------------
-解析计划：
+###2. Screenshot
+![Screenshot](apk/demo.png)  
 
-1. Countly Mobile Analytics - Android SDK (进行中...2%)
-2. countly-server(约10月)
+###3. Document
+[countly-sdk-android使用指南](http://resources.count.ly/v2.0/docs/countly-sdk-for-android) 
+[countly－server试用](http://cloud.count.ly)
