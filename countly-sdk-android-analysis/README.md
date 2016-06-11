@@ -1,18 +1,13 @@
-${项目名} 源码解析
+$countly-sdk-android 源码解析
 ====================================
-> 本文为 [Android 开源项目源码解析](http://a.codekk.com) 中 ${项目名} 部分  
- 项目地址：[${项目名}](${项目原地址})，分析的版本：[${commitId}.substring(0, 7)](${项目原地址}/commit/${commitId} "Commit id is ${commitId}")，Demo 地址：[${项目名} Demo](https://github.com/android-cn/android-open-project-demo/tree/master/${项目 Demo 地址})    
- 分析者：[${分析者}](${分析者 Github 地址})，分析状态：未完成，校对者：[Trinea](https://github.com/trinea)，校对状态：未开始   
+>  项目地址：[countly-sdk-android](https://github.com/Countly/countly-sdk-android)，分析的版本：[16.02.01 Release](https://github.com/Countly/countly-sdk-android/commit/c105d06e573703d9e29d5c92068a41befa36f43f)，Demo 地址：[countly-sdk-android-demo](https://github.com/Labmem003/zhenzhi-open-project-analysis/tree/master/countly-sdk-android-demo)    
+ 分析者：[振之](https://github.com/Labmem003)，分析状态：未完成
 
-建议大家看下 [Volley](../volley/README.md)、[UIL](../universal-image-loader/README.md)、[Dagger](../dagger/README.md)、[Event Bus](../event-bus/README.md) 的分析，了解分析该到什么程度，以及类似流程图和总体设计该怎么做。  
-
-`复制一份到自己的项目文件夹下，然后根据自己项目替换掉 ${} 内容，删掉本行及上面两行。`  
 
 ###1. 功能介绍  
-功能介绍，包括功能或优点等  
+Countly 是一款类似于友盟的移动&Web应用通用的实时统计分析系统，专注于易用性、扩展性和功能丰富程度。不同之处是Countly是开源的，任何人都可以将Countly客户端部署在自己的服务器并将开发工具包整合到他们的应用程序中。比友盟要简洁干净，而且这下数据和程序都完全处于自己控制之下了。
 
-**完成时间**  
-- `一天内`完成  
+这里分析的是其Android端的sdk, 以了解和学习移动应用统计类的工具收集App的使用情况和终端用户的行为的机制。主要功能包括App基本数据收集、自定义事件记录、崩溃报告。
 
 ###2. 详细设计
 ###2.1 类详细介绍
