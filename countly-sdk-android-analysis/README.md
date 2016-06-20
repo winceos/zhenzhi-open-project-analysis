@@ -3,24 +3,46 @@ countly-sdk-android 源码解析
 >  项目地址：[countly-sdk-android](https://github.com/Countly/countly-sdk-android)，分析的版本：[16.02.01 Release](https://github.com/Countly/countly-sdk-android/commit/c105d06e573703d9e29d5c92068a41befa36f43f)，Demo 地址：[countly-sdk-android-demo](https://github.com/Labmem003/zhenzhi-open-project-analysis/tree/master/countly-sdk-android-demo)    
  分析者：[振之](https://github.com/Labmem003)，分析状态：未完成
 
+工作需要用到了一个叫Countly的开源移动应用实时统计分析系统，类似于友盟。挺好奇这类统计系统的实现机制的，于是读了一下源码。项目其实十分简单，功能性代码比较多。可以看出移动统计类系统并没有什么高深莫测的地方，，跟我们平常写业务代码的套路是一样一样的。
 
+笔记如下，有需要／好奇的可以看看。
+
+读完大概需要15分钟。
 ###1. 功能介绍  
 ####1.1 Countly
-Countly 是一款类似于友盟的移动&Web应用通用的实时统计分析系统，专注于易用性、扩展性和功能丰富程度。不同之处是Countly是开源的，任何人都可以将Countly客户端部署在自己的服务器并将开发工具包整合到他们的应用程序中。比友盟要简洁干净，而且这下数据和程序都完全处于自己控制之下了。
+Countly 是一款类似于友盟的移动&Web应用通用的实时统计分析系统，专注于易用性、扩展性和功能丰富程度。不同之处是Countly是开源的，任何人都可以将Countly客户端部署在自己的服务器并将开发工具包整合到他们的应用程序中。比友盟要简洁干净，关键是数据和程序都完全处于自己掌控之下，不愿被第三方掌握数据，或者有什么特殊需求的，可以自己满足自己了。
 
 这里分析的是其Android端的sdk, 以了解和学习移动应用统计类的工具收集App的使用情况和终端用户的行为的机制。主要功能包括App基本数据收集、自定义事件记录、崩溃报告。
 ####1.2 基本使用
 待补充。。。
 
-###2. 详细设计
-###2.1 类详细介绍
+###2. 总体设计
+上面是Countly SDK的总体设计图。
+
+SDK主要处理Event、Crash和会话流（Session）3种数据记录请求。其中Crash和Session自动记录，并作为Connection持久存储到ConnectionQueue, 等待提交到服务器；Event则由开发者调用，并配有一个EventQueue存储，但是在上报给服务器的时候依然是通过加入到ConnectionQueue。也就是说，所有请求，最后都是Connection。
+ConnectionQueue和EventQueue不是平常意义的FIFO队列，而是本地存储队列。包装了基于SharePreference实现的持久层Store，每个请求会被字符串化，加上分隔符，添加到对应的SP键值后面。
+
+最终存储在SP的ConnectionQueue，大概长这样：
+
+```
+"app_key=appKey_&timestamp=3482759874&hour=6&dow=2&session_duration=24&location=3，8:::app_key=appKey_&timestamp=345567773&hour=8&dow=3&session_duration=12&location=3，8"
+```
+OK, 接口地址知道，数据在手, 取出来按接口要求拼装好，fire the hole 就是了。
+
+###3. 流程图
+主要功能流程图
+
+###4. 详细设计
+###4.1 类关系图
+  
+###4.2 类详细介绍
 结构很简单，一共就两个包，countly核心包和openudid包。
 上图。
 countly包解决统计什么，怎么实施统计；而openudid包解决如何标记统计的数据来自何方。
 
-####2.1.1 openudid包
+####4.2.1 openudid包
 先来看看比较简单的openudid包，她是一个设备标识方案，能提供一个设备通用统一标识符（Unique Device IDentifier/UDID）。如果同一台设备上有多个App都用了这个包来生成UDID，他们获取的UDID是一致的（即所谓设备标识）。当我们将统计数据发送给服务端时，会将UDID附上。不难想到，之后服务端算日活、描述用户特征、事件追踪等等各种后续的数据分析肯定都离不开UDID，算是很必要的基础设施。实际上她也是一个开源包[OpenUDID](https://github.com/vieux/OpenUDID)。
-#####2.1.1.1 OpenUDID_service.java
+#####4.2.1.1 OpenUDID_service.java
 这个类很简单，就是一个只重写了onTransact方法的Service，支持跨进程调用。
 
 ```
@@ -73,7 +95,7 @@ UDID与OpenUDID的不同之处
 普通的iOS设备用户不会没事就去恢复系统或者抹掉系统，所以一般OpenUDID的值是不会改变的；
 在iOS系统升级换代时，会产生较大的影响，毕竟95%以上的iOS设备用户都会选择升级到最新的系统；
 是否足够替代就看你对UDID的需求是什么了，如果要求怎么都不能变，那OpenUDID可能还是不能满足你的需求！)
-#####2.1.1.2 OpenUDID_manager.java
+#####4.2.1.2 OpenUDID_manager.java
 调用sync(Context context)来初始化一个udid, 策略是先看自己有木有，木有的话就从好基友那里拿，好基友也没有就只能自己撸一个出来。
 
 一切都撸完之后，调用getOpenUDID就可以得到一枚UDID了。
@@ -171,11 +193,20 @@ http://www.bkjia.com/Androidjc/1036506.html
 
 (5)public static String getOpenUDID(),就是getOpenUDID。
 
-####2.1.2 countly包
-#####2.2.1.1 OpenUDIDAdapter.java
+####4.2.2 countly包
+概念解释
+
+Event
+
+Session
+
+Crash
+
+Connection
+#####4.2.2.1 OpenUDIDAdapter.java
 包装了UDID包，提供sync（），getOpenUDID（）。但是是用动态反射的方法封装的，不明白为什么。官方的commit 木essage说了一句：call OpenUDID dynamically so that including the OpenUDID source is not necessary to get the Countly Android SDK to work when an app provides it's own deviceID。
 看懂的请告诉我。
-#####2.2.1.1 DeviceId.java
+#####4.2.2.2 DeviceId.java
 代表设备ID的类。 
 （1）主要属性是
 
@@ -193,49 +224,352 @@ public static enum Type {
     }
 ```
 openUDID前面已介绍过，其他两种也是类似，不累述。
-#####2.2.1.1 DeviceInfo.java
+#####4.2.2.3 DeviceInfo.java
 一个纯POJO类，用来存放设备信息，如设备名称、设备分辨率、版本号等。
 
 主要方法：
 static String getMetrics(final Context context)，返回url-encoded的属性json字符串。
-#####2.2.1.1 CrashDetails.java
-#####2.2.1.1 Event.java
-#####2.2.1.1 EventQueue.java
-#####2.2.1.1 CountlyStore.java
-#####2.2.1.1 UserData.java
-#####2.2.1.1 Countly.java
-#####2.2.1.1 ConnectionQueue.java
-#####2.2.1.1 ConnectionProcessor.java
+#####4.2.2.4 CrashDetails.java
+提供了一些静态方法来获取运行时环境信息，结合DeviceInfo类, 为Crash时提供详细的参考信息。
 
-###2.2 类关系图
-类关系图，类的继承、组合关系图，可是用 [StarUML](http://staruml.io/) 工具。  
+主要方法：
+列举，json生成。
 
-**完成时间**  
-- 根据项目大小而定，目前简单根据项目 Java 文件数判断，完成时间大致为：`文件数 * 7 / 10`天，特殊项目具体对待  
+```
+ static String getCrashData(final Context context, String error, Boolean nonfatal) {
+        final JSONObject json = new JSONObject();
 
-###3. 流程图
-主要功能流程图  
-- 如 Retrofit、Volley 的请求处理流程，Android-Universal-Image-Loader 的图片处理流程图  
-- 可使用 [Google Drawing](https://docs.google.com/drawings)、[Visio](http://products.office.com/en-us/visio/flowchart-software)、[StarUML](http://staruml.io/) 等工具完成，其他工具推荐？？  
-- 非所有项目必须，不需要的请先在群里反馈  
+        fillJSONIfValuesNotEmpty(json,
+                "_error", error,
+                "_nonfatal", Boolean.toString(nonfatal),
+                "_logs", getLogs(),
+                "_device", DeviceInfo.getDevice(),
+                "_os", DeviceInfo.getOS(),
+                "_os_version", DeviceInfo.getOSVersion(),
+                "_resolution", DeviceInfo.getResolution(context),
+                "_app_version", DeviceInfo.getAppVersion(context),
+                "_manufacture", getManufacturer(),
+                "_cpu", getCpu(),
+                "_opengl", getOpenGL(context),
+                "_ram_current", getRamCurrent(context),
+                "_ram_total", getRamTotal(context),
+                "_disk_current", getDiskCurrent(),
+                "_disk_total", getDiskTotal(),
+                "_bat", getBatteryLevel(context),
+                "_run", getRunningTime(),
+                "_orientation", getOrientation(context),
+                "_root", isRooted(),
+                "_online", isOnline(context),
+                "_muted", isMuted(context),
+                "_background", isInBackground()
+                );
 
-**完成时间**  
-- `两天内`完成  
+       ...
+            json.put("_custom", getCustomSegments());
+        ...
+        String result = json.toString();
 
-###4. 总体设计
-整个库分为哪些模块及模块之间的调用关系。  
-- 如大多数图片缓存会分为 Loader 和 Processer 等模块。  
-- 可使用 [Google Drawing](https://docs.google.com/drawings)、[Visio](http://products.office.com/en-us/visio/flowchart-software)、[StarUML](http://staruml.io/) 等工具完成，其他工具推荐？？  
-- 非所有项目必须，不需要的请先在群里反馈。  
+        ...
+            result = java.net.URLEncoder.encode(result, "UTF-8");
+        ...
 
-**完成时间**  
-- `两天内`完成  
+        return result;
+    }
+```
+#####4.2.2.5 UserData.java
+类似CrashDetail,简单类。
 
-###5. 杂谈
-该项目存在的问题、可优化点及类似功能项目对比等，非所有项目必须。  
+```
+/*
+     * Send provided values to server
+     */
+    public void save(){
+        connectionQueue_.sendUserData();
+        UserData.clear();
+    }
+```
+#####4.2.2.6 Event.java
+定义了一个事件的数据结构
 
-**完成时间**  
-- `两天内`完成  
+```
+	public String key;//键，识别事件
+    public int count;//发生此事件的次数
+    public double sum;//事件的全部数值数据，比如一次支付事件的支付金额，可选
+	public Map<String, String> segmentation;//分段键值对，用来扩展自定义数据，数量不受限制
+```
+由于多个事件可结合在单一请求中，为了正确报告和处理数据（特别是排队数据），还有下面3个属性用来提供数据记录时间：
+
+```
+	public int timestamp;//时间戳
+    public int hour;//本地时间，0-23
+    public int dow;//星期几
+```    
+
+```
+JSONObject toJSON()
+static Event fromJSON(final JSONObject json)
+```
+还有fromJson和toJson函数来在事件对象和json表示之间转换。这个类就这些了。
+#####4.2.2.7 EventQueue.java
+这个类用来队列化event，并且可以将event转化为json，方便提交到服务器。
+
+（1）主要属性：
+
+```
+private final CountlyStore countlyStore_;
+```
+CountlyStore是一个持久化存储类，EventQueue类其实就是对CountlyStore的一个封装，每次有Event添加进queue，就会通过CountlyStore直接持久化存储到本地（本地队列的末尾）；出queue的时候也是直接从本地队列中移除。CountlyStore在后面还会详细介绍。
+
+```
+    /**
+     * Constructs an EventQueue.
+     * @param countlyStore backing store to be used for local event queue persistence
+     */
+    EventQueue(final CountlyStore countlyStore) {
+        countlyStore_ = countlyStore;
+    }
+```
+
+（2）主要方法：
+并不是真正意义上的queue，使用recordEvent入队一个Event到本地，使用events直接把整个队列提取出来并且转换为urlEncoded的json串，可以直接用于提交给服务器。好处是合并请求，方便一次提交多个event，当然也是因为配合api。
+
+```
+String events() {
+        String result;
+	//从CountlyStore取回EventQueue
+        final List<Event> events = countlyStore_.eventsList();
+        
+        //Json化
+        final JSONArray eventArray = new JSONArray();
+        for (Event e : events) {
+            eventArray.put(e.toJSON());
+        }
+
+        result = eventArray.toString();
+
+        countlyStore_.removeEvents(events);
+
+	//UrlEncode
+        try {
+            result = java.net.URLEncoder.encode(result, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // should never happen because Android guarantees UTF-8 support
+        }
+
+        return result;
+    }
+    
+```
+
+```
+void recordEvent(final String key, final Map<String, String> segmentation, final int count, final double sum) {
+        ...
+        //直接持久化存入本地Event队列
+        countlyStore_.addEvent(key, segmentation, timestamp, hour, dow, count, sum);
+    }
+```
+#####4.2.2.8 CountlyStore.java
+该类使用SharePreference为Event,Connection,Location 3类数据提供持久化服务.
+介绍存储方式。
+
+以Event为例，每次有新来的Event，会先读取本地的events, 把新来的event加到末尾，然后整个队列重新被json化存储到Shareference.
+
+```
+void addEvent(final Event event) {
+        final List<Event> events = eventsList();
+        events.add(event);
+        preferences_.edit().putString(EVENTS_PREFERENCE, joinEvents(events, DELIMITER)).commit();
+    }
+```
+
+直接从SharePreference取出所有json表示的events
+
+```
+public String[] events()
+```
+
+将json表示的events反序列化，并排序，返回。
+
+```
+public List<Event> eventsList() {
+        final String[] array = events();
+        final List<Event> events = new ArrayList<>(array.length);
+        for (String s : array) {
+            try {
+                final Event event = Event.fromJSON(new JSONObject(s));
+                if (event != null) {
+                    events.add(event);
+                }
+            } catch (JSONException ignored) {
+                // should not happen since JSONObject is being constructed from previously stringified JSONObject
+                // events -> json objects -> json strings -> storage -> json strings -> here
+            }
+        }
+        // order the events from least to most recent
+        Collections.sort(events, new Comparator<Event>() {
+            @Override
+            public int compare(final Event e1, final Event e2) {
+                return e1.timestamp - e2.timestamp;
+            }
+        });
+        return events;
+    }
+```
+
+```
+ public String[] connections()
+ public String[] events()
+ public List<Event> eventsList()
+```
+
+#####4.2.2.9 Countly.java
+暴露接口和驱动各个类工作的入口类。主要的属性是
+EventQueue，ConnectionQueue，和ScheduledExecutorService。
+（1）构造和init
+调用其他接口前需先调用init()来初始化，主要是参数检验、初始化和配置EventQueue，ConnectionQueue。构造的时候就开启了一个1分钟1次的定时任务。
+
+```
+ Countly() {
+        connectionQueue_ = new ConnectionQueue();
+        Countly.userData = new UserData(connectionQueue_);
+        timerService_ = Executors.newSingleThreadScheduledExecutor();
+        timerService_.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                onTimer();
+            }
+        }, TIMER_DELAY_IN_SECONDS, TIMER_DELAY_IN_SECONDS, TimeUnit.SECONDS);
+    }
+...
+  deviceIdInstance.init(context, countlyStore, true);
+
+            connectionQueue_.setServerURL(serverURL);
+            connectionQueue_.setAppKey(appKey);
+            connectionQueue_.setCountlyStore(countlyStore);
+            connectionQueue_.setDeviceId(deviceIdInstance);
+
+            eventQueue_ = new EventQueue(countlyStore);
+            ...
+```
+
+（2）定时任务
+记录session和event到connectionqueue，并触发发送数据行为，所有的数据都是从connectionqueue 的store中取得。
+
+```
+synchronized void onTimer() {
+        final boolean hasActiveSession = activityCount_ > 0;
+        if (hasActiveSession) {
+            if (!disableUpdateSessionRequests_) {
+                connectionQueue_.updateSession(roundedSecondsSinceLastSessionDurationUpdate());
+            }
+            if (eventQueue_.size() > 0) {
+                connectionQueue_.recordEvents(eventQueue_.events());
+            }
+        }
+    }
+```
+
+(3)Session更新，利用activityCount
+（4）异常捕获,使用UncaughtExceptionHandler
+
+```
+ /**
+     * Enable crash reporting to send unhandled crash reports to server
+     */
+    public synchronized Countly enableCrashReporting() {
+        //get default handler
+        final Thread.UncaughtExceptionHandler oldHandler = Thread.getDefaultUncaughtExceptionHandler();
+
+        Thread.UncaughtExceptionHandler handler = new Thread.UncaughtExceptionHandler() {
+
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+                Countly.sharedInstance().connectionQueue_.sendCrashReport(sw.toString(), false);
+
+                //if there was another handler before
+                if(oldHandler != null){
+                    //notify it also
+                    oldHandler.uncaughtException(t,e);
+                }
+            }
+        };
+
+        Thread.setDefaultUncaughtExceptionHandler(handler);
+        return this;
+    }
+```
+（5）记录事件
+
+事件先被记录在eventQueue, 到了需要被发送的时候会被全部取出放入connectionQueue。connectionQueue有发送数据的能力，系统定时从把connectionQueue中的多条数据合并发送到服务器。
+
+```
+public synchronized void recordEvent(final String key, final Map<String, String> segmentation, final int count, final double sum) {
+       ...
+        eventQueue_.recordEvent(key, segmentation, count, sum);
+        sendEventsIfNeeded();
+    }
+    
+void sendEventsIfNeeded() {
+        if (eventQueue_.size() >= EVENT_QUEUE_SIZE_THRESHOLD) {
+            connectionQueue_.recordEvents(eventQueue_.events());
+        }
+    }
+```
+
+#####4.2.2.10 ConnectionQueue.java
+需要被发送的各种数据，包括前面说过的event和crash等，都在此提供发送接口，实际发送的时候都会被转换为connection,持久化添加到connectionQueue中，Tick的时候由ConnectionProcessor从Store中取出发送到服务端。
+
+```
+//该方法会被定时触发
+ void recordEvents(final String events) {
+        checkInternalState();
+        final String data = "app_key=" + appKey_
+                          + "&timestamp=" + Countly.currentTimestamp()
+                          + "&hour=" + Countly.currentHour()
+                          + "&dow=" + Countly.currentDayOfWeek()
+                          + "&events=" + events;
+
+        store_.addConnection(data);
+
+        tick();
+    }
+```
+tick与connectionProcessorFuture_要解释下
+
+```
+void tick() {
+        if (!store_.isEmptyConnections() && (connectionProcessorFuture_ == null || connectionProcessorFuture_.isDone())) {
+            ensureExecutor();
+            connectionProcessorFuture_ = executor_.submit(new ConnectionProcessor(serverURL_, store_, deviceId_, sslContext_));
+        }
+    }
+```
+其他数据也跟Events类似，包括session,location,userData,CrashReport
+
+```
+void beginSession()
+void updateSession(final int duration)
+void endSession(final int duration)
+
+void sendCrashReport(String error, boolean nonfatal)
+void sendUserData()
+```
+#####4.2.2.11 ConnectionProcessor.java
+是个Runnable，每次被Run的时候，从Store中取出当前所有的Connections，用http发送。
+
+```
+URLConnection urlConnectionForEventData(final String eventData)
+```
+拼装url并打开Conn
+
+```
+public void run()
+```
+从Store中取出数据，调用urlConnectionForEventData（）生成conn,发起请求。
+
 
 ###6. 修改完善  
 在完成了上面 5 个部分后，移动模块顺序，将  
