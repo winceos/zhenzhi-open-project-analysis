@@ -72,7 +72,7 @@ ConnectionQueue和EventQueue不是平常意义的FIFO队列，而是本地存储
 ```
 "app_key=appKey_&timestamp=3482759874&hour=6&dow=2&session_duration=24&location=3，8:::app_key=appKey_&timestamp=345567773&hour=8&dow=3&session_duration=12&location=3，8"
 ```
-OK, 接口地址知道，数据在手, 取出来按接口要求拼装好，fire the hole 就是了。
+OK, 接口地址知道，数据在手, 取出来按接口要求拼装好，fire the hole。
 
 ###3. 流程图
 ![](image/CountlyFlowchartDiagram.png) 
@@ -121,25 +121,6 @@ reply.writeInt(data.readInt()); //Return to the sender the input random number
 reply.writeString(preferences.getString(OpenUDID_manager.PREF_KEY, null));
 
 ```
-(面大家解释的都比较清楚了。我想补充的是，我们需要唯一标识设备，还是标识app? 按照apple的政策，标识设备是不可以的，所以UDID，MAC都被禁止访问。我们要统计用户怎么办？OK标识app是可以的，用UUID可以实现，我理解OpenUDID就是一种UUID。可以被重新生成的ID。
-单纯OpenUDID的代码是不会被拒，但获取MAC地址的方法是会被拒的。
-根据你的解释，那我的理解，关于OpenUDID，如果一个开发者的一个App自己想识别设备，还是可以用OpenUDID的吧？对么？
-
-http://blog.woodbunny.com/post-104.html
-http://blog.csdn.net/meegomeego/article/details/16858883
-
-https://www.zhihu.com/question/20141418
-
-讲讲苹果禁掉udid的理由，佩服一下。
-现在ios9都出来了，应该有解决方案了吧，这里分析android端为主，不过多关注ios的情况。
-
-UDID与OpenUDID的不同之处
-每台iOS设备的UDID是唯一且永远不会改变；
-每台iOS设备的OpenUDID是通过第一个带有OpenUDID SDK包的App生成，如果你完全删除全部带有OpenUDID SDK包的App（比如恢复系统等），那么OpenUDID会重新生成，而且和之前的值会不同，相当于新设备；
-是否足够替代
-普通的iOS设备用户不会没事就去恢复系统或者抹掉系统，所以一般OpenUDID的值是不会改变的；
-在iOS系统升级换代时，会产生较大的影响，毕竟95%以上的iOS设备用户都会选择升级到最新的系统；
-是否足够替代就看你对UDID的需求是什么了，如果要求怎么都不能变，那OpenUDID可能还是不能满足你的需求！)
 #####4.2.1.2 OpenUDID_manager.java
 调用sync(Context context)来初始化一个udid, 策略是先看自己有木有，木有的话就从好基友那里拿，好基友也没有就只能自己撸一个出来。
 
@@ -241,18 +222,19 @@ http://www.bkjia.com/Androidjc/1036506.html
 ####4.2.2 countly包
 概念解释
 
-Event
+Event，事件，以键值方式记录，键为事件名，值记录次数。
 
-Session
+Session，会话，定时更新；形成的会话流，代表应用的一次使用过程。
 
-Crash
+Crash，崩溃。
 
-Connection
+Connection，连接；以上请求（事件、会话、崩溃）都会转换为Connection提交给服务器。
 #####4.2.2.1 OpenUDIDAdapter.java
 包装了UDID包，提供sync（），getOpenUDID（）。但是是用动态反射的方法封装的，不明白为什么。官方的commit 木essage说了一句：call OpenUDID dynamically so that including the OpenUDID source is not necessary to get the Countly Android SDK to work when an app provides it's own deviceID。
 看懂的请告诉我。
 #####4.2.2.2 DeviceId.java
 代表设备ID的类。 
+
 （1）主要属性是
 
 private String id;//设备标识ID
@@ -278,7 +260,6 @@ static String getMetrics(final Context context)，返回url-encoded的属性json
 提供了一些静态方法来获取运行时环境信息，结合DeviceInfo类, 为Crash时提供详细的参考信息。
 
 主要方法：
-列举，json生成。
 
 ```
  static String getCrashData(final Context context, String error, Boolean nonfatal) {
@@ -322,7 +303,7 @@ static String getMetrics(final Context context)，返回url-encoded的属性json
     }
 ```
 #####4.2.2.5 UserData.java
-类似CrashDetail,简单类。
+类似CrashDetail。
 
 ```
 /*
@@ -427,7 +408,7 @@ void addEvent(final Event event) {
     }
 ```
 
-直接从SharePreference取出所有json表示的events
+直接从SharePreference取出所有json表示的events。
 
 ```
 public String[] events()
@@ -514,8 +495,14 @@ synchronized void onTimer() {
     }
 ```
 
-(3)Session更新，利用activityCount
-（4）异常捕获,使用UncaughtExceptionHandler
+(3)Session流开始和退出，利用activityCount
+Android没有很好的办法监听应用开始和结束，所以每个Activity都需要调用Countly.shareInstance().onStart()和onStop方法，方法内部用一个int变量来activityCount_来记录当前Activity数量。onStart时activityCount_＋1, onStop时－1。
+
+onStart中，当activityCount_＝＝1时，应用启动， 开始Session流；
+
+onStop中，当activityCount_＝＝0时，应用退出前台， 结束Session流。
+
+(4)异常捕获,使用UncaughtExceptionHandler
 
 ```
  /**
@@ -582,7 +569,7 @@ void sendEventsIfNeeded() {
         tick();
     }
 ```
-tick与connectionProcessorFuture_要解释下
+tick，持久层有待发送连接且当前没有正在提交数据，则启动一个ConnectionProcessor来提交数据。
 
 ```
 void tick() {
@@ -614,21 +601,3 @@ URLConnection urlConnectionForEventData(final String eventData)
 public void run()
 ```
 从Store中取出数据，调用urlConnectionForEventData（）生成conn,发起请求。
-
-
-###6. 修改完善  
-在完成了上面 5 个部分后，移动模块顺序，将  
-`2. 详细设计` -> `2.1 核心类功能介绍` -> `2.2 类关系图` -> `3. 流程图` -> `4. 总体设计`  
-顺序变为  
-`2. 总体设计` -> `3. 流程图` -> `4. 详细设计` -> `4.1 类关系图` -> `4.2 核心类功能介绍`  
-并自行校验优化一遍，确认无误后将文章开头的  
-`分析状态：未完成`  
-变为：  
-`分析状态：已完成`  
-
-本期校对会由专门的`Buddy`完成，可能会对分析文档进行一些修改，请大家理解。  
-
-**完成时间**  
-- `两天内`完成  
-
-**到此便大功告成，恭喜大家^_^**  
