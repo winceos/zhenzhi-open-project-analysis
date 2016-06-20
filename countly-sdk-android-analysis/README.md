@@ -59,6 +59,9 @@ Countly.sharedInstance().enableCrashReporting()
 ```
 更详细的使用，可参照我写的小[Demo](https://github.com/Labmem003/zhenzhi-open-project-analysis/tree/master/countly-sdk-android-demo)。
 ###2. 总体设计
+
+![](image/CountlyDesign.png) 
+
 上面是Countly SDK的总体设计图。
 
 SDK主要处理Event、Crash和会话流（Session）3种数据记录请求。其中Crash和Session自动记录，并作为Connection持久存储到ConnectionQueue, 等待提交到服务器；Event则由开发者调用，并配有一个EventQueue存储，但是在上报给服务器的时候依然是通过加入到ConnectionQueue。也就是说，所有请求，最后都是Connection。
@@ -72,7 +75,7 @@ ConnectionQueue和EventQueue不是平常意义的FIFO队列，而是本地存储
 OK, 接口地址知道，数据在手, 取出来按接口要求拼装好，fire the hole 就是了。
 
 ###3. 流程图
-主要功能流程图
+![](image/CountlyFlowchartDiagram.png) 
 
 ###4. 详细设计
 ###4.1 类关系图
