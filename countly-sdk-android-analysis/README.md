@@ -598,6 +598,20 @@ URLConnection urlConnectionForEventData(final String eventData)
 拼装url并打开Conn
 
 ```
-public void run()
+public void run(){
+while (true) {
+...
+conn = urlConnectionForEventData(eventData);
+                conn.connect();
+}
+// consume response stream
+                responseStream = new BufferedInputStream(conn.getInputStream());
+                final ByteArrayOutputStream responseData = new ByteArrayOutputStream(256); // big enough to handle success response without reallocating
+                int c;
+                while ((c = responseStream.read()) != -1) {
+                    responseData.write(c);
+                }
+...
+}
 ```
-从Store中取出数据，调用urlConnectionForEventData（）生成conn,发起请求。
+从Store中取出数据，调用urlConnectionForEventData（）生成conn, 发起请求。
