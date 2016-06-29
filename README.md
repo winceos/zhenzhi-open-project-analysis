@@ -4,5 +4,5 @@
 -----------
 解析计划：
 
-1. [Countly Mobile Analytics - Android SDK](https://github.com/Labmem003/zhenzhi-open-project-analysis/tree/master/countly-sdk-android-analysis) (进行中...80%)
-2. countly-server(约10月)
+1. [Countly Mobile Analytics - Android SDK](https://github.com/Labmem003/zhenzhi-open-project-analysis/tree/master/countly-sdk-android-analysis) (完成)
+2. countly-server(进行中...约10月)
